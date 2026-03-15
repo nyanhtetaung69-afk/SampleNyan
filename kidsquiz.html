@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kids Material Quiz</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #e0f2fe; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .quiz-card { background: white; width: 90%; max-width: 450px; padding: 20px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; position: relative; }
+        .q-img { width: 100%; height: 180px; object-fit: cover; border-radius: 15px; margin-bottom: 15px; border: 4px solid #f1f5f9; }
+        .question-text { font-size: 19px; font-weight: bold; color: #1e293b; margin-bottom: 20px; min-height: 50px; }
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .opt-btn { background: #f8fafc; border: 2px solid #e2e8f0; padding: 15px; border-radius: 12px; cursor: pointer; font-size: 16px; font-weight: 600; transition: 0.2s; color: #475569; }
+        .opt-btn:hover { background: #dbeafe; border-color: #3b82f6; }
+        
+        /* Popup Box Style */
+        #popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 30px 50px;
+            border-radius: 20px;
+            font-size: 30px;
+            font-weight: bold;
+            color: white;
+            z-index: 100;
+            box-shadow: 0 0 50px rgba(0,0,0,0.3);
+            text-align: center;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn { from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+        
+        .correct-bg { background-color: #22c55e; }
+        .wrong-bg { background-color: #ef4444; }
+        .score-board { margin-top: 20px; font-weight: bold; color: #64748b; }
+    </style>
+</head>
+<body>
+
+<div id="popup">Correct! ✨</div>
+
+<div class="quiz-card">
+    <div id="game-content">
+        <img id="display-img" class="q-img" src="" alt="quiz">
+        <div class="question-text" id="display-q">Loading...</div>
+        <div class="options-grid" id="display-opts"></div>
+        <div class="score-board" id="score-board">Score: 0 / 10</div>
+    </div>
+    <div id="result-screen" style="display:none; font-size: 24px; color: #0f172a;"></div>
+</div>
+
+<script>
+    const quizData = [
+        { q: "My t-shirt is made of soft __________.", opts: ["rock", "fabric", "glass", "metal"], ans: 1, img: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=400" },
+        { q: "I use a pencil to write on a piece of __________.", opts: ["rubber", "wood", "paper", "plastic"], ans: 2, img: "https://images.unsplash.com/photo-1456735190827-d1262f71b8a3?w=400" },
+        { q: "Close your eyes and __________ how fuzzy the bear is.", opts: ["rock", "feel", "metal", "paper"], ans: 1, img: "https://images.unsplash.com/photo-1559454403-b8fb88521f11?w=400" },
+        { q: "The window is made of __________ so we can see outside.", opts: ["wood", "fabric", "rubber", "glass"], ans: 3, img: "https://images.unsplash.com/photo-1509644851169-2acc08aa25b5?w=400" },
+        { q: "The mountain is made of very hard __________.", opts: ["paper", "plastic", "rock", "fabric"], ans: 2, img: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400" },
+        { q: "Wood, metal, and plastic are all types of __________.", opts: ["materials", "feel", "fabric", "paper"], ans: 0, img: "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=400" },
+        { q: "My bouncy ball is made of stretchy __________.", opts: ["glass", "rubber", "rock", "wood"], ans: 1, img: "https://images.unsplash.com/photo-1515615378413-500b4672e811?w=400" },
+        { q: "A spoon and a fork are often made of shiny __________.", opts: ["paper", "fabric", "metal", "rock"], ans: 2, img: "https://images.unsplash.com/photo-1594913785162-e6785b483ac9?w=400" },
+        { q: "Tables and chairs are made from a tree's __________.", opts: ["plastic", "wood", "glass", "rubber"], ans: 1, img: "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=400" },
+        { q: "My toy blocks and water bottle are made of __________.", opts: ["fabric", "paper", "rock", "plastic"], ans: 3, img: "https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?w=400" }
+    ];
+
+    let index = 0, score = 0;
+    const correctSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3');
+    const wrongSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2003/2003-preview.mp3');
+
+    function showQuestion() {
+        const item = quizData[index];
+        document.getElementById("display-img").src = item.img;
+        document.getElementById("display-q").innerText = item.q;
+        const optsDiv = document.getElementById("display-opts");
+        optsDiv.innerHTML = "";
+        item.opts.forEach((o, i) => {
+            const btn = document.createElement("button");
+            btn.className = "opt-btn";
+            btn.innerText = o;
+            btn.onclick = () => check(i);
+            optsDiv.appendChild(btn);
+        });
+    }
+
+    function check(i) {
+        const popup = document.getElementById("popup");
+        if (i === quizData[index].ans) {
+            score++;
+            correctSound.play();
+            popup.innerText = "Correct! ✨";
+            popup.className = "correct-bg";
+        } else {
+            wrongSound.play();
+            popup.innerText = "Try Again! ❌";
+            popup.className = "wrong-bg";
+        }
+        
+        popup.style.display = "block";
+        document.getElementById("score-board").innerText = `Score: ${score} / 10`;
+
+        setTimeout(() => {
+            popup.style.display = "none";
+            index++;
+            if (index < quizData.length) {
+                showQuestion();
+            } else {
+                finish();
+            }
+        }, 1200);
+    }
+
+    function finish() {
+        document.getElementById("game-content").style.display = "none";
+        const res = document.getElementById("result-screen");
+        res.style.display = "block";
+        res.innerHTML = `<h2>Finished! 🎉</h2><p>Your Final Score: ${score} / 10</p><button onclick="location.reload()" style="padding:10px 20px; border-radius:10px; cursor:pointer;">Play Again</button>`;
+    }
+
+    showQuestion();
+</script>
+
+</body>
+</html>
